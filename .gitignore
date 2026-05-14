@@ -26,3 +26,6 @@ coverage.html
 
 # macOS
 .DS_Store
+
+# Claude Code instrucciones del proyecto
+CLAUDE.md
