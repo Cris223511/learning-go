@@ -1,0 +1,28 @@
+# Claude Code configuración local
+.claude/
+
+# Binarios compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Binarios de Go
+/bin/
+/dist/
+
+# Archivos de coverage
+coverage.out
+coverage.html
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Directorios de IDEs
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
