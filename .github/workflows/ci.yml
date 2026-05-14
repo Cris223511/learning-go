@@ -1,0 +1,47 @@
+# Pipeline de CI para learning-go.
+# Se ejecuta automáticamente en cada push a main y en cada PR hacia main.
+# Si algún paso falla, el PR no puede mergearse (requiere configurarlo en Settings > Branches).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Build, Test y Vet
+    runs-on: ubuntu-latest
+
+    steps:
+      # Descarga el código del repo en el runner de GitHub.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Instala la versión de Go que usamos en el proyecto.
+      - name: Instalar Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true   # cachea el módulo entre ejecuciones para que sea más rápido
+
+      # Descarga todas las dependencias del go.mod.
+      - name: Descargar dependencias
+        run: go mod download
+
+      # go vet detecta problemas comunes: Printf con args incorrectos,
+      # variables sin usar, errores de concurrencia, etc.
+      - name: Análisis estático (go vet)
+        run: go vet ./...
+
+      # Corre todos los tests del módulo y muestra el porcentaje de coverage.
+      # Los paquetes del módulo 11-13 que requieren PostgreSQL no tienen tests
+      # aquí porque no hay BD disponible en el runner. Los tests de 08-testing sí corren.
+      - name: Tests con coverage
+        run: go test -cover ./08-testing/...
+
+      # Verifica que todo el código compila sin errores.
+      - name: Build
+        run: go build ./...

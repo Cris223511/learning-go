@@ -1,0 +1,60 @@
+# docker-compose levanta los tres componentes del sistema:
+# PostgreSQL + polizas-svc + clientes-svc
+#
+# Correr todo: docker-compose up --build
+# Solo la BD:  docker-compose up postgres
+# Detener:     docker-compose down
+# Detener y borrar volúmenes: docker-compose down -v
+
+services:
+
+  # Base de datos compartida entre ambos servicios.
+  # En producción real cada servicio tendría su propia BD.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aprendizago
+    ports:
+      - "5432:5432"           # expuesto para que puedas conectarte con pgAdmin o DBeaver
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persiste los datos entre reinicios
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  polizas-svc:
+    build:
+      context: ..             # el contexto es la raíz del repo porque el go.mod está ahí
+      dockerfile: 13-microservicios/polizas-svc/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/aprendizago?sslmode=disable
+      PORT: "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy   # espera a que PostgreSQL esté listo antes de arrancar
+
+  clientes-svc:
+    build:
+      context: ..
+      dockerfile: 13-microservicios/clientes-svc/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/aprendizago?sslmode=disable
+      PORT: "8082"
+      # En Docker, los servicios se comunican por nombre de servicio, no por localhost.
+      POLIZAS_SVC_URL: http://polizas-svc:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      polizas-svc:
+        condition: service_started   # espera a que polizas-svc haya arrancado
+
+volumes:
+  postgres_data:
